@@ -1,0 +1,14 @@
+name: StanCosmography
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - arviz
+  - python=3.7
+  - astropy
+  - pystan
+  - seaborn
+  - corner
+  - jupyterlab
+  - numpy
+  - scipy
