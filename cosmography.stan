@@ -4,35 +4,47 @@ functions {
   real[] cosmo_integrand(real z, real[] Ez, real[] cosmo_params, real[] data_reals, int[] data_ints) {
     real Om;
     real Ol;
+    real Ok;
     real zp1;
-    real H0;
 
     real result[1];
-    
+
     Om = cosmo_params[1];
     Ol = cosmo_params[2];
+    Ok = 1.0 - Om - Ol;
 
     zp1 = z + 1.0;
 
-    result[1] = 1.0/sqrt(Om*zp1^3 + Ol); // Enforce flat universe, so ignore Omegak
-    return result;    
+    result[1] = 1.0/sqrt(Om*zp1^3 + Ol + Ok*zp1^2);
+    return result;
   }
 
-  real[] dls(int Nobs, real[] zs, real H0, real[] Omegas, real[] data_reals, int[] data_ints) {
+  real[] dls(real[] zs, real H0, real[] Omegas, real[] data_reals, int[] data_ints) {
+    int Nobs = size(zs);
     real dm_matrix[Nobs, 1]; // The ODE solvers output a matrix of
 			     // states at each time; in our example,
 			     // the state in one-dimensional, so the
 			     // matrix has only a single column
     real dl[Nobs];
 
-    real dl0[1];
+    real dm0[1];
 
-    dl0[1] = 0.0;
-    
-    dm_matrix = integrate_ode_rk45(cosmo_integrand, dl0, 0.0, zs, Omegas, data_reals, data_ints);
+    dm0[1] = 0.0;
+
+    dm_matrix = integrate_ode_rk45(cosmo_integrand, dm0, 0.0, zs, Omegas, data_reals, data_ints);
 
     for (i in 1:Nobs) {
-      dl[i] = (1.0 + zs[i]) * 2.99792e5 / H0 * dm_matrix[i,1];
+      real Ok = 1.0 - sum(Omegas);
+      real dM;
+
+      if (Ok > 0) {
+        dM = 1.0 / sqrt(Ok) * sinh(sqrt(Ok)*dm_matrix[i,1]);
+      } else if (Ok < 0) {
+        dM = 1.0 / sqrt(-Ok) * sin(sqrt(-Ok)*dm_matrix[i,1]);
+      } else {
+        dM = dm_matrix[i,1];
+      }
+      dl[i] = (1.0 + zs[i]) * 2.99792e5 / H0 * dM;
     }
 
     return dl;
@@ -54,13 +66,14 @@ transformed data {
 
 parameters {
   real<lower=0> H0; // In km/s/Mpc!
-  simplex[2] Omegas; // Must sum to one!
+  real<lower=0, upper=1> Omegas[2]; // Omega_M, Omega_L
 }
 
 transformed parameters {
+  real Ok = 1 - sum(Omegas);
   real dls_pred[Nobs];
 
-  dls_pred = dls(Nobs, zobs, H0, to_array_1d(Omegas), data_reals, data_ints);
+  dls_pred = dls(zobs, H0, Omegas, data_reals, data_ints);
 }
 
 model {
