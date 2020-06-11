@@ -19,8 +19,9 @@ functions {
     return result;
   }
 
-  real[] dls(real[] zs, real H0, real[] Omegas, real[] data_reals, int[] data_ints) {
+  real[] dls(real[] zs, real H0, real Om, real Ol, real[] data_reals, int[] data_ints) {
     int Nobs = size(zs);
+    real Omegas[2] = {Om, Ol};
     real dm_matrix[Nobs, 1]; // The ODE solvers output a matrix of
 			     // states at each time; in our example,
 			     // the state in one-dimensional, so the
@@ -66,19 +67,23 @@ transformed data {
 
 parameters {
   real<lower=0> H0; // In km/s/Mpc!
-  real<lower=0, upper=1> Omegas[2]; // Omega_M, Omega_L
+  real<lower=0> Om;
+  real<lower=0> Ol;
 }
 
 transformed parameters {
-  real Ok = 1 - sum(Omegas);
+  real Ok = 1 - Om - Ol;
   real dls_pred[Nobs];
 
-  dls_pred = dls(zobs, H0, Omegas, data_reals, data_ints);
+  dls_pred = dls(zobs, H0, Om, Ol, data_reals, data_ints);
 }
 
 model {
-  dls_obs ~ normal(dls_pred, sigma_dls_obs);
-
+  /* Priors on cosmo params */
   H0 ~ normal(70, 10);
-  // Flat prior on Omegas
+  Om ~ normal(0.3, 1.0);
+  Ol ~ normal(0.7, 1.0);
+
+  /* Likelihood of observations. */
+  dls_obs ~ normal(dls_pred, sigma_dls_obs);
 }
