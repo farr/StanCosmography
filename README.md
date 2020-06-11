@@ -8,4 +8,4 @@ cosmological luminosity distance).
 This repo can be run in [binder](http://mybinder.org) by clicking on the button
 below.
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/farr/StanCosmography/master)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://binder.flatironinstitute.org/~wfarr/StanCosmography)
